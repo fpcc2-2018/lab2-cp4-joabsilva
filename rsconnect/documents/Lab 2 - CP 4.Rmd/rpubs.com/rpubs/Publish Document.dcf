@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/384631/cbd6700472a7406b91f8a36a9aace9c6
+bundleId: https://api.rpubs.com/api/v1/document/384631/cbd6700472a7406b91f8a36a9aace9c6
+url: http://rpubs.com/joabsilva/384631
+when: 1525042765.89929

@@ -2,13 +2,14 @@
 title: "Lab 2- Checkpoint 4"
 author: "Joab de Araújo"
 date: "29 de Abril de 2018"
-output: 
-  html_notebook: 
-    theme: spacelab
+output: html_notebook
 ---
 
 
 ```{r setup}
+suppressMessages(library("tidyverse"))
+suppressMessages(library("here"))
+suppressMessages(library("ggplot2"))
 library(tidyverse)
 library(here)
 library(knitr)
