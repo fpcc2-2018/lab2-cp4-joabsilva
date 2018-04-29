@@ -1,0 +1,37 @@
+---
+title: "Lab 2- Checkpoint 4"
+author: "Joab de Araújo"
+date: "29 de Abril de 2018"
+output: 
+  html_notebook: 
+    theme: spacelab
+---
+
+
+```{r setup}
+library(tidyverse)
+library(here)
+library(knitr)
+library(ggplot2)
+theme_set(theme_bw())
+
+```
+
+
+```{r read}
+projetos = read_csv(here::here("data/search_data.csv"))
+```
+
+```{r}
+  projetos%>%
+  ggplot(aes(x = group, y = session_start_timestamp)) + 
+  geom_boxplot(width = .3, outlier.colour = "red",  outlier.shape = 1) +
+    scale_y_log10()
+
+```
+
+```{r}
+projetos %>% 
+    ggplot(aes(x = session_start_timestamp, color=group)) + 
+    geom_density() + scale_x_log10() 
+```
