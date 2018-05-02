@@ -20,6 +20,7 @@ searches = events %>%
     arrange(timestamp) %>% 
     summarise(
         session_start_timestamp = first(timestamp),
+        session_end_timestamp = last(timestamp),
         session_start_date = ymd_hms(first(timestamp)),
         group = first(group), # eventos de uma mesma sessão são de um mesmo grupo
         results = max(n_results, na.rm = TRUE), # se não houver busca, retorna -Inf

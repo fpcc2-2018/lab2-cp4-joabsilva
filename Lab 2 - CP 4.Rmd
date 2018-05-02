@@ -1,7 +1,7 @@
 ---
 title: "Lab 2- Checkpoint 4"
 author: "Joab de Araújo"
-date: "29 de Abril de 2018"
+date: "30 de Abril de 2018"
 output: html_notebook
 ---
 
@@ -14,25 +14,177 @@ library(tidyverse)
 library(here)
 library(knitr)
 library(ggplot2)
+library(lubridate)
 theme_set(theme_bw())
 
 ```
 
+#Dados coletados
 
 ```{r read}
-projetos = read_csv(here::here("data/search_data.csv"))
+buscas = read_csv(here::here("data/search_data.csv"))
 ```
+
+Este relatório é a resposta do exercício de FPCC 2, usando os dados disponiblizado pelo Wikimedia, que estão no [GitHub](https://github.com/wikimedia-research/Discovery-Hiring-Analyst-2016 "Wikimedia"), o qual tentaremos responder as seguintes perguntas, separadamente:
+
+1. Qual é a taxa de cliques geral diária? Como isso varia entre os grupos?
+2. Quais resultados as pessoas tendem a tentar primeiro? Como isso muda no dia-a-dia?
+3. Qual é a taxa de resultados zero no geral? Como isso varia entre os grupos?
+4. A duração da sessão é aproximadamente o tempo entre o primeiro e o último evento de uma sessão. Escolha uma variável do conjunto de dados e descreva sua relação com o tamanho da sessão. Visualize o relacionamento.
+
+Serão uUtilizados gráficos acompanhados por explicações para responder às perguntas.
+
+Para responder a pergunta foram utilizados as variáveis:
+
+* **date**: Essa variável não está originalmente nos dados coletados, porém está dentro de outra variável chamada **session_start_date**, então essa varável foi criada por meio do seguinte script;
 
 ```{r}
-  projetos%>%
-  ggplot(aes(x = group, y = session_start_timestamp)) + 
-  geom_boxplot(width = .3, outlier.colour = "red",  outlier.shape = 1) +
-    scale_y_log10()
-
+buscas <- mutate(buscas, date = date(session_start_date))
 ```
+
+* **num_clicks**: é a quantidade total de vezes que o usuário clicou nos resultados de cada busca;
+
+* **group**: são os grupos de cada sessão está e os grupos são o **a** e o **b**;
+
+* **results**: é a quantidade total de resultados de cada busca;
+
+* **first_click**: é o primeiro click que o usuário faz em cada busca;
+
+* **session_start_timestamp**: é o tempo registrado em milissegundos no começo da sessão de busca;
+
+* **session_last_timestamp**: é o tempo registrado em milissegundos no fim da sessão de busca; 
+
+##Questão 1
+
+Para essa pergunta, foram utilizaas às variáveis **num_clicks**, **date** e **group**.
+
+A taxa de cliques diária geral varia entre aproximadamente 6600 e um pouco mais de 3000 cliques diários, o que é mostrada no gráfico abaixo.
 
 ```{r}
-projetos %>% 
-    ggplot(aes(x = session_start_timestamp, color=group)) + 
-    geom_density() + scale_x_log10() 
+total_cliques <- buscas %>%
+    group_by(date)%>%
+    summarise(cliques = sum(num_clicks))
+
+ggplot(total_cliques, aes(date, cliques))+
+    geom_col() +
+    labs(x = "Dia", y = "Cliques")
+
 ```
+
+Pode-se perceber picos de cliques nos três primeiros dias, após isso há dois dias de queda e depois uma ligeira crescida no número de cliques, vale salientar que no dia 8 os dados obtidos só mostram os cliques até às 20:24, ou seja, a queda desse dia pode ser por causa que a pesquisa não cobriu o dia todo.
+
+No gráfico a seguir mostramos a taxa de cliques por grupo:
+
+```{r}
+total_cliques <- buscas%>% 
+    group_by(date, group) %>%
+    summarise(cliques = sum(num_clicks))
+
+ggplot(total_cliques, aes(date, cliques, fill = group))+
+    geom_col() +
+    facet_grid(group ~ .) +
+    labs(x = "Dia", y = "Cliques", fill="Grupos")
+
+```
+
+Como pode ser observado no gráfico, há uma diferença grande entre os grupos, em que o grupo **A** tem maior número de cliques, porém com variações maiores. Já o **B** tem as menores taxas de cliques, porém com variação menor do que o **A**.
+
+##Questão 2
+
+Para responder esta pergunta, iremos usar as variáveis **first_click** e **date**. Segue o gráfico da posição do primeiro clique no resultado da busca:
+
+```{r}
+buscas %>%
+    filter(first_click <= 200) %>%
+    ggplot(aes(x = first_click)) + 
+    geom_histogram() +
+    geom_rug(alpha = .3) + 
+    scale_y_log10() +
+    labs(x = "Posição do resultado", y = "Ocorrências")
+```
+
+
+Optou-se por usar nesse gráfico os resultados das 200 primeiras posições, pois assim facilitaria a visualização do resultado. Com a ajuda da função rug, que coloca linhas abaixo do gráfico para indicar onde há ocorrências, pode-se observar que a maior concentração de cliques ocorrem aproximadamente nas 25 primeiras posições.
+
+A seguir é apresentado o gráfico em relação aos dias:
+
+```{r}
+buscas %>% 
+    ggplot(aes(x = date, y = first_click)) + 
+    geom_jitter(alpha = .1, width = .3) +
+    scale_y_log10() +
+    labs(x = "Data", y = "Posição do resultado ")
+```
+
+Nesse gráfico optamos por usar todos os resultados coletados, com isso pode-se ter uma noção geral da distribuição em relação aos dias. No geral não há tanta diferença entre os dias, porém vale abordar dois pontos. No dia 04/03 há um aumento nos cliques acima da posição 100 e o outro ponto a falar são os cliques que ocorreram acima da posição 1000, não dar para responder ambos pontos, porém é algo interessante a se relatar.
+
+##Questão 3
+
+Para responder esta pergunta, iremos usar as variáveis **results** e **group**. Obtemos a seguinte visualização: 
+
+```{r}
+result_0 <- buscas%>%
+    filter(results == 0)
+
+result <- buscas%>%
+    summarise(total = n())
+    
+total_0 <- result_0%>%
+    summarise(vazios=n())
+merge(result, total_0)%>%
+ggplot()+
+    geom_col(aes(x="", y =(total/total)*100), fill= "#006400", width = .2)+
+    geom_col(aes(x="", y=(vazios/total)*100), fill= "#1E90FF", width = .2)+
+    geom_text(aes(x = "", y = (vazios/total)*100, label=paste(trunc((vazios/total)*100), "%")), vjust=3, hjust= .3, color="black", size=4) +
+    labs(x = "Resultado", y = "Total %")
+    
+
+```
+
+A barra em azul indica o total de resultados zero em relação ao total que está em verde escuro. Como pode ser reparado o total de buscas com retorno zero, é pequeno em relação ao número total de buscas.
+
+Para a segunda parte dessa pergunta, é apreentado o seguinte gráfico:
+
+```{r}
+total_0 <- result_0%>%
+    group_by(group)%>%
+    summarise(vazios=n())
+
+result <- buscas%>%
+    group_by(group)%>%
+    summarise(total = n())
+
+merge(result, total_0)%>%
+ggplot()+
+    geom_col(aes(x="", y =(total/total)*100), fill= "#006400", width = .2)+
+    geom_col(aes(x="", y=(vazios/total)*100), fill= "#1E90FF", width = .2)+
+    facet_grid(group ~ .)+
+    geom_text(aes(x = "", y = (vazios/total)*100, label=paste(trunc((vazios/total)*100), "%")), vjust=1.6, hjust= .3, color="black", size=4) +
+    labs(x = "Resultado", y = "Total %")
+
+```
+
+Como pode ser visto no gráfico, o resultado é o mesmo quando dividirmos em grupos. Por mais que o grupo **B** ser menos, ambos grupos tem resultados iguais em termos de porcentagem, então nesse aspecto ambos os grupos tiveram resultados iguais. 
+
+##Questão 4
+
+Para responder a última pergunta, foi usado às variáveis **session_start_timestamp**, **session_end_timestamp** e **date*. Obetivemos o seguinte gráfico:
+
+```{r}
+
+buscas %>%
+    group_by(session_id) %>%
+    summarise(date_0 = first(date), 
+              duration = last(session_end_timestamp) - first(session_start_timestamp)) %>%
+    ggplot(aes(x = date_0, y = duration)) +
+    geom_jitter(alpha = .1, width = .3) +
+    scale_y_log10() +
+    labs(x = "Dias", y = "Duração da sessão (s)")
+
+```
+
+Esse gráfico apresenta o comportamento dos tempos das sessões em relação ao dia, e como pode ser observado, o comportamento é bastante similar em todos os dias, vale salientar que foi feita uma subtração entre o tempo final e inicial da sessão, para que pudéssemos obter o tempo da sessão.
+
+##Questão 5
+
+Neste relatorio, procuramos responder da melhor forma possível, as perguntas do exercício disponibilizados pelo Wikimedia, utilizamos gráficos de barras, histogramas e de pontos, para facilitar o entendimento dos resultados dos dados obtidos.
